@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
@@ -78,7 +79,14 @@ function getLocalRankingResults(): RankingResult[] {
 
 export default function RankPage() {
 	const t = useTranslations('rank')
-	const [filters, setFilters] = useState({
+	const [filters, setFilters] = useState<{
+		searchModel: string;
+		baseUrl: string;
+		timeRange: string;
+		metric: string;
+		listModel: string[];
+		listBaseHost: string[];
+	}>({
 		searchModel: '',
 		baseUrl: '',
 		timeRange: 'all',
@@ -97,14 +105,6 @@ export default function RankPage() {
 		{
 			name: 'DeepSeek',
 			searchModel: 'deepseek',
-		},
-		{
-			name: 'DeepSeek R1',
-			listModel: getModelByName('DeepSeek R1')?.alias,
-		},
-		{
-			name: 'DeepSeek V3',
-			listModel: getModelByName('DeepSeek V3')?.alias,
 		},
 		{
 			name: 'Gemini',
@@ -127,7 +127,7 @@ export default function RankPage() {
 		setFilters({
 			...filters,
 			searchModel: badges[index].searchModel || '',
-			listModel: badge.listModel || [],
+			listModel: (badge.listModel as string[] | undefined) || [],
 		})
 	}
 
@@ -195,7 +195,35 @@ export default function RankPage() {
 	} = useSWR<{ results: RankingResult[] }>({ url: '/api/speed/rank', args: filters }, fetcher)
 
 	// 优先使用 API 数据，如果没有则使用本地数据
-	const data = apiData?.results.length > 0 ? apiData : { results: localResults }
+	let rawResults = apiData?.results && apiData.results.length > 0 ? apiData.results : localResults
+	
+	// 对本地数据应用筛选条件
+	if (!apiData?.results || apiData.results.length === 0) {
+		rawResults = rawResults.filter(result => {
+			// 根据 searchModel 筛选（模糊匹配）
+			if (filters.searchModel && !result.model.toLowerCase().includes(filters.searchModel.toLowerCase())) {
+				return false
+			}
+			// 根据 listModel 筛选（精确匹配）
+			if (filters.listModel.length > 0 && !filters.listModel.includes(result.model)) {
+				return false
+			}
+			return true
+		})
+	}
+	
+	// 根据选择的指标对数据进行排序
+	const sortedResults = [...rawResults].sort((a, b) => {
+		if (filters.metric === 'tokensPerSecond') {
+			// 按 tokensPerSecond 降序排序（越高越好）
+			return b.avgTokensPerSecond - a.avgTokensPerSecond
+		} else {
+			// 按 firstTokenLatency 升序排序（越低越好）
+			return a.avgFirstTokenLatency - b.avgFirstTokenLatency
+		}
+	})
+	
+	const data = { results: sortedResults }
 	const error = apiError
 	const loading = apiLoading && localResults.length === 0
 
@@ -245,6 +273,15 @@ export default function RankPage() {
 								{badge.name}
 							</Badge>
 						))}
+						<Input
+							placeholder={t('customFilter')}
+							value={filters.searchModel}
+							onChange={(e) => {
+								setFilters({ ...filters, searchModel: e.target.value })
+								setBadgeIndex(-1) // 清除选中的标签
+							}}
+							className="w-40 md:w-48"
+						/>
 					</div>
 
 					<div className="flex gap-4 w-full md:w-auto">

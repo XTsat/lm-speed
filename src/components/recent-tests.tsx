@@ -1,7 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
-import useSWR from "swr";
-import { type TestResult } from "@/app/api/speed/recent/route";
+import { useState, useEffect } from "react";
+import { getRecentTests, type SpeedTestResult } from "@/lib/local-storage";
 
 interface Props {
   host?: string;
@@ -11,17 +11,47 @@ export function RecentTests(params: Props) {
   const { host } = params;
   const t = useTranslations("RecentTests");
   const tRank = useTranslations("rank");
-  const fetcher = ({ url, args }: { url: string; args: never }) =>
-    fetch(`${url}?${new URLSearchParams(args)}`).then((res) => res.json());
+  const [recentTests, setRecentTests] = useState<SpeedTestResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const {
-    data,
-    error,
-    isLoading: loading,
-  } = useSWR<{ recentTests: TestResult[] }>(
-    { url: "/api/speed/recent", args: host ? { host } : {} },
-    fetcher
-  );
+  useEffect(() => {
+    const loadRecentTests = () => {
+      try {
+        setLoading(true);
+        const tests = getRecentTests(10);
+        
+        // 如果指定了 host，则过滤
+        const filtered = host 
+          ? tests.filter(test => {
+              try {
+                return new URL(test.baseUrl).host === host;
+              } catch {
+                return false;
+              }
+            })
+          : tests;
+        
+        setRecentTests(filtered);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load recent tests');
+        console.error('Error loading recent tests:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRecentTests();
+
+    // 监听测试完成事件
+    const handleTestCompleted = () => {
+      loadRecentTests();
+    };
+
+    window.addEventListener('lm-speed-test-completed', handleTestCompleted);
+    return () => window.removeEventListener('lm-speed-test-completed', handleTestCompleted);
+  }, [host]);
 
   if (loading) {
     return (
@@ -43,12 +73,11 @@ export function RecentTests(params: Props) {
     );
   }
 
-  // 添加更好的 null 检查
-  if (!data || !data.recentTests || data.recentTests.length === 0) {
+  if (recentTests.length === 0) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-gray-50 shadow overflow-hidden rounded-lg p-4 text-center text-gray-500">
-          暂无测试记录
+          {t('noTests')}
         </div>
       </div>
     );
@@ -61,36 +90,52 @@ export function RecentTests(params: Props) {
       </h2>
       <div className="bg-white shadow overflow-hidden rounded-lg">
         <ul className="divide-y divide-gray-200">
-          {data.recentTests.map((test) => (
-            <li key={test.id} className="px-4 py-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {test.model}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {new URL(test.baseUrl).host}
-                  </p>
-                  <div className="mt-1 text-xs text-gray-400">
-                    <span className="mr-4">
-                      {tRank("table.avgTokens")}{" "}
-                      {test.avgTokensPerSecond?.toFixed(2)} t/s
-                    </span>
-                    <span>
-                      {tRank("table.avgLatency")}{" "}
-                      {test.avgFirstTokenLatency
-                        ? (test.avgFirstTokenLatency / 1000).toFixed(2)
-                        : "-"}
-                      s
-                    </span>
+          {recentTests.map((test) => {
+            // 计算平均值
+            const avgTokensPerSecond = test.results.length > 0
+              ? test.results.reduce((sum, r) => sum + r.tokensPerSecond, 0) / test.results.length
+              : 0;
+            const avgFirstTokenLatency = test.results.length > 0
+              ? test.results.reduce((sum, r) => sum + r.firstTokenLatency, 0) / test.results.length
+              : 0;
+            
+            return (
+              <li key={test.id} className="px-4 py-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {test.results[0]?.model || 'Unknown'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {(() => {
+                        try {
+                          return new URL(test.baseUrl).host;
+                        } catch {
+                          return test.baseUrl;
+                        }
+                      })()}
+                    </p>
+                    <div className="mt-1 text-xs text-gray-400">
+                      <span className="mr-4">
+                        {tRank("table.avgTokens")}{" "}
+                        {avgTokensPerSecond?.toFixed(2)} t/s
+                      </span>
+                      <span>
+                        {tRank("table.avgLatency")}{" "}
+                        {avgFirstTokenLatency
+                          ? (avgFirstTokenLatency / 1000).toFixed(2)
+                          : "-"}
+                        s
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-sm text-gray-500">
+                    {new Date(test.timestamp).toLocaleString()}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500">
-                  {new Date(test.timestamp).toLocaleString()}
-                </p>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

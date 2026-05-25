@@ -80,7 +80,7 @@ export default function Header() {
 							</DropdownMenuContent>
 						</DropdownMenu>
 						<Button variant="outline" size="icon" asChild>
-							<Link href="https://github.com/nexmoe/lm-speed" target="_blank">
+							<Link href="https://github.com/XTsat/lm-speed" target="_blank">
 								<GithubIcon className="h-4 w-4" />
 							</Link>
 						</Button>

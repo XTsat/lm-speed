@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       timeRange: searchParams.timeRange || undefined,
       metric: searchParams.metric || undefined,
       limit: searchParams.limit ? parseInt(searchParams.limit as string) : undefined,
-      listModel: searchParams.listModel ? searchParams.listModel.split(',') : undefined,
+      listModel: searchParams.listModel ? (Array.isArray(searchParams.listModel) ? searchParams.listModel : searchParams.listModel.split(',')) : undefined,
     });
 
     let timeFilter = sql`1=1`;
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ results });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.errors }, { status: 400 });
+      return NextResponse.json({ error: error.issues }, { status: 400 });
     }
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

@@ -12,12 +12,14 @@ import {
 import { getProvider } from "@/lib/info";
 import { Button } from "@/components/ui/button";
 import { getProviders, getTestResults } from "@/lib/local-storage";
+import { useTranslations } from "next-intl";
 
 interface Provider {
   baseUrl: string;
 }
 
 export default function NavPage() {
+  const t = useTranslations('Nav');
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,15 +77,15 @@ export default function NavPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">LM Speed 提供商导航</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('title')}</h1>
       <p className="mb-8 text-gray-600">
-        以下是所有在 LM Speed 测试中使用的 API 提供商列表
+        {t('subtitle')}
       </p>
 
       {loading && (
         <div className="flex justify-center">
           <div className="bg-white shadow overflow-hidden rounded-lg p-4 text-center text-gray-500">
-            加载中...
+            {t('loading')}
           </div>
         </div>
       )}
@@ -114,7 +116,7 @@ export default function NavPage() {
               </CardHeader>
               <CardContent>
                 <Button asChild>
-                  <Link href={`/provider/${host}`}>查看测试结果 </Link>
+                  <Link href={`/provider/${host}`}>{t('viewResults')}</Link>
                 </Button>
               </CardContent>
             </Card>

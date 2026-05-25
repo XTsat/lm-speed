@@ -31,7 +31,7 @@
   },
   "HomePage": {
     "about": "Go to About page",
-    "subtitle": "Supporting OpenAI, DeepSeek, Silicon Flow, Tencent Cloud and more.",
+    "subtitle": "Supporting OpenAI (compatible API), DeepSeek, Silicon Flow, Tencent Cloud and more",
     "subtitle2": "Help developers conduct comprehensive speed tests, analyze API performance, and compare horizontally",
     "title": "LLM API Speed Test"
   },
@@ -47,7 +47,8 @@
     "viewResults": "View Test Results"
   },
   "RecentTests": {
-    "recentTests": "Recent Test Results"
+    "recentTests": "Recent Test Results",
+    "noTests": "No test records"
   },
   "SpeedTest": {
     "form": {
@@ -169,6 +170,11 @@
       "month": "Last Month",
       "week": "Last Week"
     },
-    "title": "Speed Test Rankings"
+    "title": "Speed Test Rankings",
+    "customFilter": "Custom Filter..."
+  },
+  "Footer": {
+    "madeBy": "Made with ❤️ by",
+    "starOnGithub": "Star on GitHub"
   }
 }

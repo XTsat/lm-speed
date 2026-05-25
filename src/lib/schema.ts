@@ -9,7 +9,7 @@ export const speedTestSchema = z.object({
     .int('Count must be an integer')
     .positive('Count must be a positive number')
     .max(20, 'Maximum count is 100')
-    .default(1),
+    .optional(),
 });
 
 export const modelSchema = z.object({

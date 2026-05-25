@@ -14,10 +14,10 @@ export default function Home() {
 			<main className="space-y-48">
 				<div className="max-w-4xl mx-auto">
 					<h1 className="text-3xl font-bold text-center">{t('title')}</h1>
-					<p className="my-2 max-w-2xl mx-auto text-lg text-center leading-6 text-gray-600">
+					<p className="my-2 max-w-4xl mx-auto text-lg text-center leading-6 text-gray-600">
 						{t('subtitle')}
 					</p>
-					<p className="my-2 max-w-2xl mx-auto text-lg text-center leading-6 text-gray-600">
+					<p className="my-2 max-w-4xl mx-auto text-lg text-center leading-6 text-gray-600">
 						{t('subtitle2')}
 					</p>
 					<SpeedTestForm />

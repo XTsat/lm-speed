@@ -7,7 +7,7 @@ export default function RootLayout({
   children: ReactNode
 }) {
   return (
-    <html>
+    <html suppressHydrationWarning>
       <body className="bg-gray-50">
         {children}
       </body>
