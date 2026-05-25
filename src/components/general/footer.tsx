@@ -19,7 +19,7 @@ export default function Footer() {
           Nexmoe
         </a>
       </p>
-      <p className="mt-1">即将开源，QQ 群：1034193296</p>
+      
       <a
         href="https://github.com/nexmoe/lm-speed"
         target="_blank"

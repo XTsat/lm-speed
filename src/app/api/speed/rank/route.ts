@@ -16,6 +16,11 @@ const rankQuerySchema = z.object({
 
 export async function GET(request: Request) {
   try {
+    // 如果数据库不可用，返回空数组
+    if (!db) {
+      return NextResponse.json({ results: [] });
+    }
+
     const searchParams = getQuery(request.url);
 
     const query = rankQuerySchema.parse({

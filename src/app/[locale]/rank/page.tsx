@@ -1,12 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { Settings2 } from 'lucide-react'
+import { Settings2, RefreshCw } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
 import useSWR from 'swr'
@@ -15,6 +15,7 @@ import { Link } from '@/i18n/routing'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import Image from 'next/image'
+import { getTestResults, type SpeedTestResult as LocalSpeedTestResult } from '@/lib/local-storage'
 
 type RankingResult = {
 	model: string
@@ -29,6 +30,52 @@ type RankingResult = {
 	totalTests: number
 }
 
+// 从 localStorage 生成排名数据
+function getLocalRankingResults(): RankingResult[] {
+	const localResults = getTestResults()
+	if (localResults.length === 0) return []
+
+	// 按 model + baseUrl 分组
+	const grouped: Record<string, {
+		baseUrl: string
+		model: string
+		tokensPerSecond: number[]
+		tokensPerSecondTotal: number[]
+		firstTokenLatency: number[]
+	}> = {}
+
+	localResults.forEach(test => {
+		test.results.forEach(result => {
+			const key = `${result.model}-${test.baseUrl}`
+			if (!grouped[key]) {
+				grouped[key] = {
+					baseUrl: test.baseUrl,
+					model: result.model,
+					tokensPerSecond: [],
+					tokensPerSecondTotal: [],
+					firstTokenLatency: []
+				}
+			}
+			grouped[key].tokensPerSecond.push(result.tokensPerSecond)
+			grouped[key].tokensPerSecondTotal.push(result.tokensPerSecondTotal)
+			grouped[key].firstTokenLatency.push(result.firstTokenLatency)
+		})
+	})
+
+	return Object.values(grouped).map(g => ({
+		model: g.model,
+		baseUrl: g.baseUrl,
+		maxTokensPerSecond: Math.max(...g.tokensPerSecond),
+		minTokensPerSecond: Math.min(...g.tokensPerSecond),
+		avgTokensPerSecond: g.tokensPerSecond.reduce((a, b) => a + b, 0) / g.tokensPerSecond.length,
+		avgTokensPerSecondTotal: g.tokensPerSecondTotal.reduce((a, b) => a + b, 0) / g.tokensPerSecondTotal.length,
+		maxFirstTokenLatency: Math.max(...g.firstTokenLatency),
+		minFirstTokenLatency: Math.min(...g.firstTokenLatency),
+		avgFirstTokenLatency: g.firstTokenLatency.reduce((a, b) => a + b, 0) / g.firstTokenLatency.length,
+		totalTests: g.tokensPerSecond.length
+	}))
+}
+
 export default function RankPage() {
 	const t = useTranslations('rank')
 	const [filters, setFilters] = useState({
@@ -36,11 +83,11 @@ export default function RankPage() {
 		baseUrl: '',
 		timeRange: 'all',
 		metric: 'tokensPerSecond',
-		listModel: getModelByName('DeepSeek R1')?.alias,
+		listModel: [],
 		listBaseHost: [],
 	})
 
-	const [badgeIndex, setBadgeIndex] = useState(2)
+	const [badgeIndex, setBadgeIndex] = useState(0)
 
 	const badges = [
 		{
@@ -102,16 +149,64 @@ export default function RankPage() {
 		}))
 	}
 
+	const [localResults, setLocalResults] = useState<RankingResult[]>([])
+
+	const loadLocalResults = () => {
+		const localData = getLocalRankingResults()
+		setLocalResults(localData)
+	}
+
+	useEffect(() => {
+		// 从 localStorage 获取数据
+		loadLocalResults()
+
+		// 监听 localStorage 变化
+		const handleStorageChange = (e: StorageEvent) => {
+			if (e.key === 'lm-speed-test-results') {
+				loadLocalResults()
+			}
+		}
+
+		// 监听自定义事件，用于同一页面内的数据更新通知
+		const handleTestCompleted = () => {
+			loadLocalResults()
+		}
+
+		window.addEventListener('storage', handleStorageChange)
+		window.addEventListener('lm-speed-test-completed', handleTestCompleted)
+
+		return () => {
+			window.removeEventListener('storage', handleStorageChange)
+			window.removeEventListener('lm-speed-test-completed', handleTestCompleted)
+		}
+	}, [])
+
+	// 添加一个刷新按钮的点击处理
+	const handleRefresh = () => {
+		loadLocalResults()
+	}
+
 	const fetcher = ({ url, args }: { url: string; args: never }) =>
 		fetch(`${url}?${new URLSearchParams(args)}`).then((res) => res.json())
 	const {
-		data,
-		error,
-		isLoading: loading,
+		data: apiData,
+		error: apiError,
+		isLoading: apiLoading,
 	} = useSWR<{ results: RankingResult[] }>({ url: '/api/speed/rank', args: filters }, fetcher)
+
+	// 优先使用 API 数据，如果没有则使用本地数据
+	const data = apiData?.results.length > 0 ? apiData : { results: localResults }
+	const error = apiError
+	const loading = apiLoading && localResults.length === 0
 
 	const formatNumber = (num: number) => num?.toFixed(2)
 	const getHost = (baseUrl: string) => new URL(baseUrl).host
+
+	// 获取最大值，处理空数组情况
+	const getMaxValue = (values: number[]) => {
+		if (values.length === 0) return 1
+		return Math.max(...values)
+	}
 
 	if (error) return <div>Error: {error.message}</div>
 
@@ -166,6 +261,13 @@ export default function RankPage() {
 							</SelectContent>
 						</Select>
 
+						<Button
+								variant="outline"
+								size="icon"
+								onClick={handleRefresh}
+							>
+								<RefreshCw className="h-4 w-4" />
+							</Button>
 						<Popover>
 							<PopoverTrigger asChild>
 								<Button variant="outline" size="icon">
@@ -347,10 +449,10 @@ export default function RankPage() {
 															style={{
 																width: `${
 																	(result.avgTokensPerSecond /
-																		Math.max(
-																			...data?.results.map(
+																		getMaxValue(
+																			data?.results.map(
 																				(r) => r.avgTokensPerSecond
-																			)
+																			) || []
 																		)) *
 																	100
 																}%`,
@@ -378,11 +480,11 @@ export default function RankPage() {
 															style={{
 																width: `${
 																	(result.avgTokensPerSecondTotal /
-																		Math.max(
-																			...data?.results.map(
+																		getMaxValue(
+																			data?.results.map(
 																				(r) =>
 																					r.avgTokensPerSecondTotal
-																			)
+																			) || []
 																		)) *
 																	100
 																}%`,
@@ -404,10 +506,10 @@ export default function RankPage() {
 															style={{
 																width: `${
 																	(result.avgFirstTokenLatency /
-																		Math.max(
-																			...data?.results.map(
+																		getMaxValue(
+																			data?.results.map(
 																				(r) => r.avgFirstTokenLatency
-																			)
+																			) || []
 																		)) *
 																	100
 																}%`,

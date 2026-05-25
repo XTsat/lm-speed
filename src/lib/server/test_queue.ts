@@ -3,8 +3,12 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { db } from '@/db';
 import { speedTestsTable, speedTestResultsTable } from '@/db/schema';
-import { get_encoding } from 'tiktoken';
 import { TEST_SUITES, TestSuiteId } from './test_suites';
+
+// Simple token estimation function using character count
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
 
 // Input validation schema
 const speedTestQueueSchema = z.object({
@@ -23,6 +27,11 @@ speedTestQueue.process(async (job, done) => {
         // Validate input data
         const validatedData = speedTestQueueSchema.parse(job.data);
         console.log('queue start', validatedData);
+
+        // Check if database is available
+        if (!db) {
+            throw new Error('Database not available');
+        }
 
         const client = new OpenAI({
             baseURL: validatedData.baseUrl,
@@ -46,9 +55,6 @@ speedTestQueue.process(async (job, done) => {
             const startTime = performance.now();
             let firstTokenTime = 0;
             let content = '';
-            
-            // Get the appropriate tokenizer for the model
-            const enc = get_encoding("cl100k_base");
 
             const res = await client.chat.completions.create({
                 messages: [{
@@ -63,11 +69,10 @@ speedTestQueue.process(async (job, done) => {
             }
 
             content = res.choices[0].message.content || '';
-            const totalTokens = enc.encode(content).length;
+            const totalTokens = estimateTokens(content);
             const endTime = performance.now();
             const totalTime = endTime - startTime;
             const outputTime = totalTime - firstTokenTime;
-            enc.free();
 
             const result = {
                 prompt: selectedSuite.prompts[i],

@@ -10,6 +10,11 @@ const querySchema = z.object({
 
 export async function GET(request: Request) {
   try {
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json({ data: [] });
+    }
+
     const { searchParams } = new URL(request.url);
     const host = searchParams.get('host');
     

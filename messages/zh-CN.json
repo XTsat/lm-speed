@@ -19,7 +19,7 @@
       }
     },
     "sectionTitle": "为什么选择我们",
-    "subtitle": "帮助开发者通过全面的速度测试和分析优化 AI 应用性能",
+    "subtitle": "帮助开发者进行全面的速度测试、分析 API 性能并横向比较",
     "title": "专业的 API 速度测试工具"
   },
   "Header": {
@@ -31,7 +31,8 @@
   },
   "HomePage": {
     "about": "前往关于页面",
-    "subtitle": "支持 OpenAI、DeepSeek、硅基流动、腾讯云等。帮助开发者通过全面的速度测试和分析优化 AI 应用性能",
+    "subtitle": "支持 OpenAI、DeepSeek、硅基流动、腾讯云等。",
+    "subtitle2": "帮助开发者进行全面的速度测试、分析 API 性能并横向比较",
     "title": "大模型 API 速度测试"
   },
   "Metadata": {

@@ -12,10 +12,11 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { handleToImage } from '@/lib/tool'
 import { ResultsList } from './results-list'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
-import { Input } from '@/components/ui/input'
+import { Input } from './ui/input'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { saveTestResult } from '@/lib/local-storage'
 
 type SpeedTestResultCard = SpeedTestResult & {
 	status?: 'pending' | 'running' | 'completed'
@@ -94,7 +95,12 @@ export function SpeedTestForm() {
 			}
 		} catch (error) {
 			if (error instanceof z.ZodError) {
-				toast.error(error.errors[0].message)
+				// 添加更好的 null 检查
+				if (error.errors && error.errors.length > 0) {
+					toast.error(error.errors[0].message)
+				} else {
+					toast.error('Validation error')
+				}
 			} else {
 				console.error('Error fetching models:', error)
 				toast.error(error instanceof Error ? error.message : 'Failed to fetch models')
@@ -137,8 +143,22 @@ export function SpeedTestForm() {
 				body: JSON.stringify(data),
 			})
 
-			if (!response.ok || !response.body) {
-				throw new Error('Failed to perform speed test')
+			// 添加更详细的错误处理
+			if (!response.ok) {
+				let errorMsg = `Failed to perform speed test (${response.status})`;
+				try {
+					const errorData = await response.json();
+					if (errorData?.error) {
+						errorMsg = errorData.error;
+					}
+				} catch (e) {
+					// 如果无法解析 JSON，使用默认错误消息
+				}
+				throw new Error(errorMsg);
+			}
+
+			if (!response.body) {
+				throw new Error('No response body from server');
 			}
 
 			const reader = response.body.getReader()
@@ -224,6 +244,30 @@ export function SpeedTestForm() {
 								case 'error':
 									throw new Error(message.error)
 								case 'complete':
+									// 保存测试结果到 localStorage
+									if (results && results.length > 0) {
+										const testResultToSave = {
+											id: Date.now().toString(),
+											timestamp: new Date().toISOString(),
+											baseUrl: data.baseUrl,
+											results: results.map(r => ({
+												prompt: r.prompt,
+												model: r.model,
+												firstTokenLatency: r.firstTokenLatency,
+												tokensPerSecond: r.tokensPerSecond,
+												tokensPerSecondTotal: r.tokensPerSecondTotal,
+												outputToken: r.outputToken,
+												totalTime: r.totalTime,
+												outputTime: r.outputTime,
+												content: contentRef.current[results.indexOf(r)] || ''
+											}))
+										}
+										saveTestResult(testResultToSave)
+										toast.success('测试结果已保存')
+										
+										// 发送自定义事件通知其他页面更新数据
+										window.dispatchEvent(new Event('lm-speed-test-completed'))
+									}
 									setTimeout(() => setExpandedIndex(null), 1000)
 									setTimeout(() => {
 										document.querySelector(`#summary`)?.scrollIntoView({

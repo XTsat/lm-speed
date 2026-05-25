@@ -3,7 +3,6 @@ import { speedTestSchema } from '@/lib/schema';
 import OpenAI from 'openai';
 import { db } from '@/db';
 import { speedTestResultSchema, speedTestsTable, speedTestResultsTable } from '@/db/schema';
-import { get_encoding } from 'tiktoken';
 
 const TEST_PROMPTS = [
   "Explain the concept of quantum computing in simple terms.",
@@ -12,6 +11,13 @@ const TEST_PROMPTS = [
   "Describe the taste of your favorite food.",
   "How does photosynthesis work?"
 ];
+
+// Simple token estimation function using character count
+// This is a fallback when tiktoken is not available
+function estimateTokens(text: string): number {
+  // Rough estimate: 1 token ≈ 4 characters for English text
+  return Math.ceil(text.length / 4);
+}
 
 export async function POST(request: Request) {
   try {
@@ -25,13 +31,6 @@ export async function POST(request: Request) {
       apiKey: validatedData.apiKey,
       baseURL: validatedData.baseUrl,
     });
-
-    // Get available models to verify if the selected model is available
-    // const modelsResponse = await openai.models.list();
-    // const availableModel = modelsResponse.data.find(m => m.id === validatedData.modelId);
-    // if (!availableModel) {
-    //   throw new Error('Selected model is not available');
-    // }
 
     // Create a TransformStream for streaming the results
     const stream = new TransformStream();
@@ -52,10 +51,6 @@ export async function POST(request: Request) {
           let firstTokenTime = 0;
           let totalTokens = 0;
           let content = '';
-          
-          // Get the appropriate tokenizer for the model
-          const enc = get_encoding("cl100k_base");
-
           
           const completion = await openai.chat.completions.create({
             model: validatedData.modelId,
@@ -86,7 +81,7 @@ export async function POST(request: Request) {
               // 计算实时速度指标
               const currentTime = performance.now();
               const elapsedTime = currentTime - startTime;
-              const currentTokens = enc.encode(content).length;
+              const currentTokens = estimateTokens(content);
               const currentSpeed = currentTokens > 0 ? (currentTokens / (elapsedTime - firstTokenTime)) * 1000 : 0;
               const currentTotalSpeed = currentTokens > 0 ? (currentTokens / elapsedTime) * 1000 : 0;
 
@@ -105,11 +100,10 @@ export async function POST(request: Request) {
             }
           }
 
-          totalTokens = enc.encode(content).length;
+          totalTokens = estimateTokens(content);
           const endTime = performance.now();
           const totalTime = endTime - startTime;
           const outputTime = totalTime - firstTokenTime;
-          enc.free();
           const result = {
             prompt,
             model: validatedData.modelId,
@@ -130,46 +124,48 @@ export async function POST(request: Request) {
 
         }
 
-        // Save results to database
-        const resultsWithMeta = {
-          timestamp,
-          baseUrl: validatedData.baseUrl,
-          results
-        };
+        // Save results to database (optional - skip if database is unavailable)
+        if (db) {
+          const resultsWithMeta = {
+            timestamp,
+            baseUrl: validatedData.baseUrl,
+            results
+          };
 
-        try {
-          // Validate data with Zod schema
-          const validatedSpeedTest = speedTestResultSchema.parse(resultsWithMeta);
+          try {
+            // Validate data with Zod schema
+            const validatedSpeedTest = speedTestResultSchema.parse(resultsWithMeta);
 
-          // Insert main speed test record
-          const [speedTest] = await db.insert(speedTestsTable)
-            .values({
-              timestamp: new Date(validatedSpeedTest.timestamp),
-              baseUrl: validatedSpeedTest.baseUrl
-            })
-            .returning();
+            // Insert main speed test record
+            const [speedTest] = await db.insert(speedTestsTable)
+              .values({
+                timestamp: new Date(validatedSpeedTest.timestamp),
+                baseUrl: validatedSpeedTest.baseUrl
+              })
+              .returning();
 
-          // Insert individual test results
-          await db.insert(speedTestResultsTable)
-            .values(validatedSpeedTest.results.map(result => ({
-              speedTestId: speedTest.id,
-              prompt: result.prompt,
-              model: result.model,
-              firstTokenLatency: result.firstTokenLatency,
-              tokensPerSecond: result.tokensPerSecond,
-              tokensPerSecondTotal: result.tokensPerSecondTotal,
-              outputToken: result.outputToken,
-              totalTime: result.totalTime,
-              outputTime: result.outputTime,
-              content: result.content
-            })));
+            // Insert individual test results
+            await db.insert(speedTestResultsTable)
+              .values(validatedSpeedTest.results.map(result => ({
+                speedTestId: speedTest.id,
+                prompt: result.prompt,
+                model: result.model,
+                firstTokenLatency: result.firstTokenLatency,
+                tokensPerSecond: result.tokensPerSecond,
+                tokensPerSecondTotal: result.tokensPerSecondTotal,
+                outputToken: result.outputToken,
+                totalTime: result.totalTime,
+                outputTime: result.outputTime,
+                content: result.content
+              })));
 
-        } catch (error) {
-          console.error('Error saving results:', error);
-          await writer.write(encoder.encode(JSON.stringify({ 
-            type: 'error', 
-            error: error instanceof Error ? error.message : 'Database write error' 
-          }) + '\n'));
+            console.log('Results saved to database');
+          } catch (error) {
+            console.error('Error saving results to database (continuing without saving):', error);
+            // Don't throw error, just log it and continue
+          }
+        } else {
+          console.log('Database not available, skipping save');
         }
 
         // Close the stream

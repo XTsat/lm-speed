@@ -43,7 +43,8 @@ export function RecentTests(params: Props) {
     );
   }
 
-  if (data?.recentTests.length === 0) {
+  // 添加更好的 null 检查
+  if (!data || !data.recentTests || data.recentTests.length === 0) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="bg-gray-50 shadow overflow-hidden rounded-lg p-4 text-center text-gray-500">
@@ -60,7 +61,7 @@ export function RecentTests(params: Props) {
       </h2>
       <div className="bg-white shadow overflow-hidden rounded-lg">
         <ul className="divide-y divide-gray-200">
-          {data?.recentTests.map((test) => (
+          {data.recentTests.map((test) => (
             <li key={test.id} className="px-4 py-3">
               <div className="flex justify-between items-center">
                 <div>

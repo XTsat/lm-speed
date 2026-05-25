@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { routing } from '@/i18n/routing'
 import Header from '@/components/general/header'
 import Footer from '@/components/general/footer'
-import '../globals.css'
+
 import { Toaster } from 'sonner'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { GoogleAnalytics } from '@next/third-parties/google'
@@ -52,21 +52,13 @@ export default async function LocaleLayout({
 	const messages = await getMessages()
 
 	return (
-		<html lang={locale}>
-			<head>
-				<meta name="apple-mobile-web-app-title" content="LM Speed" />
-			</head>
-			<body className="bg-gray-50">
-				<NuqsAdapter>
-					<NextIntlClientProvider messages={messages}>
-						<Header />
-						<div className="py-32">{children}</div>
-						<Footer />
-						<Toaster richColors />
-					</NextIntlClientProvider>
-				</NuqsAdapter>
-			</body>
-			<GoogleAnalytics gaId="G-E16ZMWF868" />
-		</html>
+		<NuqsAdapter>
+			<NextIntlClientProvider messages={messages}>
+				<Header />
+				<div className="py-32">{children}</div>
+				<Footer />
+				<Toaster richColors />
+			</NextIntlClientProvider>
+		</NuqsAdapter>
 	)
 }

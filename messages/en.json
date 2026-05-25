@@ -19,7 +19,7 @@
       }
     },
     "sectionTitle": "Why Choose Us",
-    "subtitle": "Help developers optimize AI application performance through comprehensive speed testing and analysis",
+    "subtitle": "Help developers conduct comprehensive speed tests, analyze API performance, and compare horizontally",
     "title": "Professional API Speed Testing Tool"
   },
   "Header": {
@@ -31,7 +31,8 @@
   },
   "HomePage": {
     "about": "Go to About page",
-    "subtitle": "Supporting OpenAI, DeepSeek, Silicon Flow, Tencent Cloud and more. Help developers optimize AI application performance through comprehensive speed testing and analysis",
+    "subtitle": "Supporting OpenAI, DeepSeek, Silicon Flow, Tencent Cloud and more.",
+    "subtitle2": "Help developers conduct comprehensive speed tests, analyze API performance, and compare horizontally",
     "title": "LLM API Speed Test"
   },
   "Metadata": {

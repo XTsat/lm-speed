@@ -20,6 +20,11 @@ const recentQuerySchema = z.object({
 
 export async function GET(request: Request) {
   try {
+    // 如果数据库不可用，返回空数组
+    if (!db) {
+      return NextResponse.json({ recentTests: [] });
+    }
+
     const searchParams = getQuery(request.url);
 
     const query = recentQuerySchema.parse({

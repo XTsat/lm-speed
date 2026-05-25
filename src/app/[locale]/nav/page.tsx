@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 import {
   Card,
@@ -8,51 +11,65 @@ import {
 } from "@/components/ui/card";
 import { getProvider } from "@/lib/info";
 import { Button } from "@/components/ui/button";
-import { db } from "@/db";
-import { speedTestsTable } from "@/db/schema";
+import { getProviders, getTestResults } from "@/lib/local-storage";
 
 interface Provider {
   baseUrl: string;
 }
 
-export default async function NavPage() {
-  
-  // Fetch providers directly on the server
-  let providers: Provider[] = [];
-  let error = null;
+export default function NavPage() {
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const getHostFromBaseUrl = (baseUrl: string) => {
     return baseUrl.includes("http") ? new URL(baseUrl).host : baseUrl;
   };
 
-  try {
-    // Get all unique baseUrls from the speedTestsTable
-    const result = await db
-      .select({
-        baseUrl: speedTestsTable.baseUrl,
-      })
-      .from(speedTestsTable)
-      .groupBy(speedTestsTable.baseUrl)
-      .orderBy(speedTestsTable.baseUrl);
+  const loadProviders = () => {
+    // 从 localStorage 获取 providers
+    const localProviders = getProviders();
     
-    // Extract hosts from baseUrls and merge providers with the same host
-    const hostMap = new Map<string, string>();
+    // 从测试结果中提取 baseUrl
+    const testResults = getTestResults();
+    const baseUrls = new Set<string>();
     
-    result.forEach(provider => {
-      const host = getHostFromBaseUrl(provider.baseUrl);
-      // Keep the first baseUrl for each host
-      if (!hostMap.has(host)) {
-        hostMap.set(host, provider.baseUrl);
-      }
+    testResults.forEach(result => {
+      baseUrls.add(result.baseUrl);
     });
     
-    // Convert the map back to an array of providers
-    providers = Array.from(hostMap.entries()).map(([, baseUrl]) => ({
-      baseUrl
+    // 合并来源
+    const allHosts = new Set<string>();
+    localProviders.forEach(host => {
+      allHosts.add(host);
+    });
+    
+    baseUrls.forEach(baseUrl => {
+      allHosts.add(getHostFromBaseUrl(baseUrl));
+    });
+    
+    // 转换为 Provider 数组
+    const providerList: Provider[] = Array.from(allHosts).map(host => ({
+      baseUrl: host.includes("http") ? host : `https://${host}`
     }));
-  } catch (err) {
-    console.error("Error fetching providers:", err);
-    error = err;
-  }
+    
+    setProviders(providerList);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadProviders();
+
+    // 监听自定义事件，用于同一页面内的数据更新通知
+    const handleTestCompleted = () => {
+      loadProviders();
+    };
+
+    window.addEventListener('lm-speed-test-completed', handleTestCompleted);
+
+    return () => {
+      window.removeEventListener('lm-speed-test-completed', handleTestCompleted);
+    };
+  }, []);
   
 
 
@@ -63,7 +80,7 @@ export default async function NavPage() {
         以下是所有在 LM Speed 测试中使用的 API 提供商列表
       </p>
 
-      {providers.length === 0 && !error && (
+      {loading && (
         <div className="flex justify-center">
           <div className="bg-white shadow overflow-hidden rounded-lg p-4 text-center text-gray-500">
             加载中...
