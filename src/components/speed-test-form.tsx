@@ -35,6 +35,7 @@ export function SpeedTestForm() {
 	const [models, setModels] = useState<Array<{ id: string }>>([])
 	const [isFechingModel, setIsFechingModel] = useState(false)
 	const [baseUrlOpen, setBaseUrlOpen] = useState(false)
+	const [configRefreshKey, setConfigRefreshKey] = useState(0)
 	const [commonBaseUrls, setCommonBaseUrls] = useState([
 	// ==================== 国际服务商 ====================
 	{ id: 'https://api.openai.com/v1', name: 'OpenAI' },
@@ -138,7 +139,12 @@ export function SpeedTestForm() {
 
 			const data = await response.json()
 			if (data.models) {
-				setModels(data.models)
+				// 合并在线模型和自定义模型，避免重复
+				setModels(prev => {
+					const existingIds = new Set(prev.map(m => m.id))
+					const newModels = data.models.filter((m: any) => !existingIds.has(m.id))
+					return [...prev, ...newModels]
+				})
 			}
 		} catch (error) {
 			if (error instanceof z.ZodError) {
@@ -407,6 +413,7 @@ export function SpeedTestForm() {
 								<Popover open={baseUrlOpen} onOpenChange={setBaseUrlOpen}>
 									<PopoverTrigger asChild>
 										<Button
+											key={configRefreshKey}
 											variant="outline"
 											role="combobox"
 											aria-expanded={baseUrlOpen}
@@ -414,13 +421,13 @@ export function SpeedTestForm() {
 										>
 											{getValues('baseUrl')
 												? commonBaseUrls.find((url) => url.id === getValues('baseUrl'))?.name || getValues('baseUrl')
-												: 'Select base URL...'}
+												: t('form.baseUrl.placeholder')}
 											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 										</Button>
 									</PopoverTrigger>
 									<PopoverContent align="start" className="w-[500px] p-0">
 										<Command>
-											<CommandInput placeholder="Search base URL..." />
+											<CommandInput placeholder={t('form.baseUrl.placeholder')} />
 											<CommandList>
 												<CommandEmpty>No base URL found.</CommandEmpty>
 												<CommandGroup>
@@ -454,7 +461,7 @@ export function SpeedTestForm() {
 												</CommandGroup>
 											</CommandList>
 											<div className="p-2 flex flex-row gap-2">
-												<Input {...register('baseUrl')} className="h-9" placeholder="Custom URL..." />
+												<Input {...register('baseUrl')} className="h-9" placeholder={t('form.baseUrl.placeholder')} />
 												<Button
 													size="sm"
 													onClick={() => {
@@ -464,7 +471,7 @@ export function SpeedTestForm() {
 														}
 													}}
 												>
-													Add
+													{t('form.add')}
 												</Button>
 											</div>
 										</Command>
@@ -519,13 +526,13 @@ export function SpeedTestForm() {
 											{getValues('modelId')
 												? models.find((model) => model.id === getValues('modelId'))
 														?.id
-												: 'Select framework...'}
+												: t('form.modelId.placeholder')}
 											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 										</Button>
 									</PopoverTrigger>
 									<PopoverContent align="start" className="w-[500px] p-0">
 										<Command>
-											<CommandInput placeholder="Search framework..." />
+											<CommandInput placeholder={t('form.modelId.placeholder')} />
 											<CommandList>
 												<CommandEmpty>No framework found.</CommandEmpty>
 												<CommandGroup>
@@ -562,7 +569,7 @@ export function SpeedTestForm() {
 														])
 													}}
 												>
-													Add
+													{t('form.add')}
 												</Button>
 											</div>
 										</Command>
@@ -572,6 +579,62 @@ export function SpeedTestForm() {
 						</div>
 
 						{errors.modelId && <p className="text-rose-400 text-sm">{errors.modelId.message}</p>}
+					</div>
+
+					<div className="flex gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							className="flex-1"
+							onClick={async () => {
+								const config = {
+									baseUrl: getValues('baseUrl'),
+									apiKey: getValues('apiKey'),
+									modelId: getValues('modelId'),
+									rememberApiKey,
+								};
+								await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+								toast.success(t('form.configCopied'));
+							}}
+						>
+							{t('form.exportConfig')}
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							className="flex-1"
+							onClick={async () => {
+								try {
+									const text = await navigator.clipboard.readText();
+									const config = JSON.parse(text);
+									if (config.baseUrl) {
+										setValue('baseUrl', config.baseUrl, { shouldDirty: true });
+										// 如果导入的URL不在列表中，自动添加
+										if (!commonBaseUrls.some(url => url.id === config.baseUrl)) {
+											setCommonBaseUrls(prev => [...prev, { id: config.baseUrl, name: config.baseUrl }]);
+										}
+									}
+									if (config.apiKey) setValue('apiKey', config.apiKey, { shouldDirty: true });
+									if (config.modelId) {
+										setValue('modelId', config.modelId, { shouldDirty: true });
+										// 如果导入的模型ID不在列表中，自动添加
+										if (!models.some(m => m.id === config.modelId)) {
+											setModels(prev => [...prev, { id: config.modelId }]);
+										}
+									}
+									if (typeof config.rememberApiKey === 'boolean') {
+										setRememberApiKey(config.rememberApiKey);
+									}
+									// 强制刷新UI显示
+									setConfigRefreshKey(prev => prev + 1);
+									toast.success(t('form.configImported'));
+								} catch (err) {
+									toast.error(t('form.configImportError'));
+								}
+							}}
+						>
+							{t('form.importConfig')}
+						</Button>
 					</div>
 
 					<Button

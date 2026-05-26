@@ -68,7 +68,13 @@
       "submit": {
         "default": "Run Speed Test (5 rounds, Est. 6000 tokens)",
         "running": "Running test..."
-      }
+      },
+      "exportConfig": "Export Config",
+      "importConfig": "Import Config",
+      "configCopied": "Config copied to clipboard",
+      "configImported": "Config imported",
+      "configImportError": "Failed to import config, please check format",
+      "add": "Add"
     },
     "results": {
       "metrics": {
