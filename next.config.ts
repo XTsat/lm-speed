@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     ],
   },
   turbopack: {
-    root: "D:\\Software\\other\\GitHub\\lm-speed",
+    root: __dirname,
   },
 };
 

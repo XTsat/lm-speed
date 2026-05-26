@@ -245,12 +245,12 @@ export function SpeedTestForm() {
 									throw new Error(message.error)
 								case 'complete':
 									// 保存测试结果到 localStorage
-									if (results && results.length > 0) {
+									if (message.data && message.data.length > 0) {
 										const testResultToSave = {
 											id: Date.now().toString(),
 											timestamp: new Date().toISOString(),
 											baseUrl: data.baseUrl,
-											results: results.map(r => ({
+											results: message.data.map((r: SpeedTestResultCard, index: number) => ({
 												prompt: r.prompt,
 												model: r.model,
 												firstTokenLatency: r.firstTokenLatency,
@@ -259,7 +259,7 @@ export function SpeedTestForm() {
 												outputToken: r.outputToken,
 												totalTime: r.totalTime,
 												outputTime: r.outputTime,
-												content: contentRef.current[results.indexOf(r)] || ''
+												content: contentRef.current[index] || ''
 											}))
 										}
 										saveTestResult(testResultToSave)
