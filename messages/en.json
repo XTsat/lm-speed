@@ -123,8 +123,8 @@
         "answer": "Through standardized performance testing and ranking features, you can visually compare the performance of different providers' APIs. The system automatically analyzes and displays comparative data for various performance metrics, helping you choose the most suitable model and provider."
       },
       "monitoring": {
-        "question": "Is long-term performance monitoring supported?",
-        "answer": "Coming soon"
+        "question": "How is your data stored?",
+        "answer": "Uses browser localstorage. You can manage it in Developer Tools - Application - Storage - Local Storage"
       }
     }
   },
