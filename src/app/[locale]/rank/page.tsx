@@ -31,10 +31,36 @@ type RankingResult = {
 	totalTests: number
 }
 
+// localStorage
+function getTimeRangeThreshold(timeRange: string): Date {
+	const now = new Date()
+	switch (timeRange) {
+		case 'day':
+			return new Date(now.getTime() - 24 * 60 * 60 * 1000)
+		case 'week':
+			return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+		case 'month':
+			return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+		default:
+			return new Date(0) // 返回 epoch 开始时间
+	}
+}
+
 // 从 localStorage 生成排名数据
-function getLocalRankingResults(): RankingResult[] {
+function getLocalRankingResults(timeRange: string = 'all'): RankingResult[] {
 	const localResults = getTestResults()
 	if (localResults.length === 0) return []
+
+	// 获取时间范围阈值
+	const threshold = getTimeRangeThreshold(timeRange)
+
+	// 按时间范围筛选
+	const filteredResults = localResults.filter(test => {
+		const testTimestamp = new Date(test.timestamp)
+		return testTimestamp >= threshold
+	})
+
+	if (filteredResults.length === 0) return []
 
 	// 按 model + baseUrl 分组
 	const grouped: Record<string, {
@@ -45,7 +71,7 @@ function getLocalRankingResults(): RankingResult[] {
 		firstTokenLatency: number[]
 	}> = {}
 
-	localResults.forEach(test => {
+	filteredResults.forEach(test => {
 		test.results.forEach(result => {
 			const key = `${result.model}-${test.baseUrl}`
 			if (!grouped[key]) {
@@ -151,25 +177,25 @@ export default function RankPage() {
 
 	const [localResults, setLocalResults] = useState<RankingResult[]>([])
 
-	const loadLocalResults = () => {
-		const localData = getLocalRankingResults()
+	const loadLocalResults = (timeRange: string = 'all') => {
+		const localData = getLocalRankingResults(timeRange)
 		setLocalResults(localData)
 	}
 
 	useEffect(() => {
 		// 从 localStorage 获取数据
-		loadLocalResults()
+		loadLocalResults(filters.timeRange)
 
 		// 监听 localStorage 变化
 		const handleStorageChange = (e: StorageEvent) => {
 			if (e.key === 'lm-speed-test-results') {
-				loadLocalResults()
+				loadLocalResults(filters.timeRange)
 			}
 		}
 
 		// 监听自定义事件，用于同一页面内的数据更新通知
 		const handleTestCompleted = () => {
-			loadLocalResults()
+			loadLocalResults(filters.timeRange)
 		}
 
 		window.addEventListener('storage', handleStorageChange)
@@ -179,11 +205,11 @@ export default function RankPage() {
 			window.removeEventListener('storage', handleStorageChange)
 			window.removeEventListener('lm-speed-test-completed', handleTestCompleted)
 		}
-	}, [])
+	}, [filters.timeRange])
 
 	// 添加一个刷新按钮的点击处理
 	const handleRefresh = () => {
-		loadLocalResults()
+		loadLocalResults(filters.timeRange)
 	}
 
 	const fetcher = ({ url, args }: { url: string; args: never }) =>
