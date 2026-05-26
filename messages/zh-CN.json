@@ -162,7 +162,13 @@
       "week": "最近一周"
     },
     "title": "LM Speed 速度测试排名",
-    "customFilter": "自定义筛选..."
+    "customFilter": "自定义筛选...",
+    "export": "导出排行榜",
+    "import": "导入数据",
+    "importSuccess": "成功导入 {count} 条数据",
+    "importError": "导入失败",
+    "importInvalidFormat": "文件格式不正确",
+    "delete": "删除"
   },
   "Footer": {
     "madeBy": "Made with ❤️ by",

@@ -177,7 +177,13 @@
       "week": "Last Week"
     },
     "title": "Speed Test Rankings",
-    "customFilter": "Custom Filter..."
+    "customFilter": "Custom Filter...",
+    "export": "Export Rankings",
+    "import": "Import Data",
+    "importSuccess": "Successfully imported {count} records",
+    "importError": "Import failed",
+    "importInvalidFormat": "Invalid file format",
+    "delete": "Delete"
   },
   "Footer": {
     "madeBy": "Made with ❤️ by",

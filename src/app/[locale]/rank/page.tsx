@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { Settings2, RefreshCw } from 'lucide-react'
+import { Settings2, RefreshCw, Download, Upload, Trash2 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
 import useSWR from 'swr'
@@ -16,7 +16,7 @@ import { Link } from '@/i18n/routing'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import Image from 'next/image'
-import { getTestResults, type SpeedTestResult as LocalSpeedTestResult } from '@/lib/local-storage'
+import { getTestResults, deleteTestResult, type SpeedTestResult as LocalSpeedTestResult } from '@/lib/local-storage'
 
 type RankingResult = {
 	model: string
@@ -166,6 +166,7 @@ export default function RankPage() {
 		avgLatency: true,
 		maxMinLatency: false,
 		totalTests: true,
+		delete: false,
 	})
 
 	const toggleColumn = (columnId: keyof typeof visibleColumns) => {
@@ -210,6 +211,99 @@ export default function RankPage() {
 	// 添加一个刷新按钮的点击处理
 	const handleRefresh = () => {
 		loadLocalResults(filters.timeRange)
+	}
+
+	// 导出排行榜数据为JSON文件
+	const handleExport = () => {
+		const exportData = {
+			exportTime: new Date().toISOString(),
+			timeRange: filters.timeRange,
+			metric: filters.metric,
+			results: sortedResults
+		}
+		const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+		const url = URL.createObjectURL(blob)
+		const a = document.createElement('a')
+		a.href = url
+		a.download = `lm-speed-rankings-${new Date().toISOString().slice(0, 10)}.json`
+		document.body.appendChild(a)
+		a.click()
+		document.body.removeChild(a)
+		URL.revokeObjectURL(url)
+	}
+
+	// 导入JSON文件
+	const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0]
+		if (!file) return
+
+		const reader = new FileReader()
+		reader.onload = (e) => {
+			try {
+				const data = JSON.parse(e.target?.result as string)
+				if (!data.results || !Array.isArray(data.results)) {
+					alert(t('importInvalidFormat'))
+					return
+				}
+				// 将导入的数据转换为SpeedTestResult格式并保存
+				const existingResults = getTestResults()
+				const newResults: LocalSpeedTestResult[] = []
+				data.results.forEach((result: RankingResult, index: number) => {
+					// 根据totalTests创建对应数量的记录
+					for (let i = 0; i < result.totalTests; i++) {
+						newResults.push({
+							id: `imported-${Date.now()}-${index}-${i}`,
+							timestamp: new Date().toISOString(),
+							baseUrl: result.baseUrl,
+							results: [{
+								prompt: 'imported',
+								model: result.model,
+								firstTokenLatency: result.avgFirstTokenLatency,
+								tokensPerSecond: result.avgTokensPerSecond,
+								tokensPerSecondTotal: result.avgTokensPerSecondTotal,
+								outputToken: 0,
+								totalTime: 0,
+								outputTime: 0,
+								content: ''
+							}]
+						})
+					}
+				})
+				const mergedResults = [...existingResults, ...newResults]
+				localStorage.setItem('lm-speed-test-results', JSON.stringify(mergedResults))
+				loadLocalResults(filters.timeRange)
+				// 触发自定义事件通知数据更新
+				window.dispatchEvent(new Event('lm-speed-test-completed'))
+				alert(t('importSuccess', { count: newResults.length }))
+			} catch {
+				alert(t('importError'))
+			}
+		}
+		reader.readAsText(file)
+		// 重置input值以便可以再次选择同一文件
+		event.target.value = ''
+	}
+
+	// 删除单条测试记录（通过model和baseUrl匹配），默认删除5条
+	const handleDelete = (result: RankingResult, deleteCount: number = 5) => {
+		const existingResults = getTestResults()
+		let deleted = 0
+		for (let i = 0; i < deleteCount && deleted < deleteCount; i++) {
+			const indexToDelete = existingResults.findIndex(
+				r => r.baseUrl === result.baseUrl && r.results.some(r2 => r2.model === result.model)
+			)
+			if (indexToDelete !== -1) {
+				deleteTestResult(existingResults[indexToDelete].id)
+				existingResults.splice(indexToDelete, 1)
+				deleted++
+			} else {
+				break
+			}
+		}
+		if (deleted > 0) {
+			loadLocalResults(filters.timeRange)
+			window.dispatchEvent(new Event('lm-speed-test-completed'))
+		}
 	}
 
 	const fetcher = ({ url, args }: { url: string; args: never }) =>
@@ -331,6 +425,33 @@ export default function RankPage() {
 							>
 								<RefreshCw className="h-4 w-4" />
 							</Button>
+						<Button
+								variant="outline"
+								size="icon"
+								onClick={handleExport}
+								title={t('export')}
+							>
+								<Download className="h-4 w-4" />
+							</Button>
+						<label>
+							<Button
+								variant="outline"
+								size="icon"
+								asChild
+								className="cursor-pointer"
+								title={t('import')}
+							>
+								<span>
+									<Upload className="h-4 w-4" />
+								</span>
+							</Button>
+							<input
+								type="file"
+								accept=".json"
+								onChange={handleImport}
+								className="hidden"
+							/>
+						</label>
 						<Popover>
 							<PopoverTrigger asChild>
 								<Button variant="outline" size="icon">
@@ -346,7 +467,9 @@ export default function RankPage() {
 										</p>
 									</div>
 									<div className="grid gap-2">
-										{Object.entries(visibleColumns).map(([key, value]) => (
+										{Object.entries(visibleColumns)
+											.filter(([key]) => key !== 'delete')
+											.map(([key, value]) => (
 											<div key={key} className="flex items-center space-x-2">
 												<Checkbox
 													id={key}
@@ -363,6 +486,21 @@ export default function RankPage() {
 												</label>
 											</div>
 										))}
+										<div className="flex items-center space-x-2">
+											<Checkbox
+												id="delete"
+												checked={visibleColumns.delete}
+												onCheckedChange={() =>
+													toggleColumn('delete')
+												}
+											/>
+											<label
+												htmlFor="delete"
+												className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+											>
+												{t('delete')}
+											</label>
+										</div>
 									</div>
 								</div>
 							</PopoverContent>
@@ -407,12 +545,15 @@ export default function RankPage() {
 								{visibleColumns.totalTests && (
 									<TableHead className="min-w-[100px]">{t('table.totalTests')}</TableHead>
 								)}
+								{visibleColumns.delete && (
+									<TableHead className="w-[60px]"></TableHead>
+								)}
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{loading ? (
 								<TableRow>
-									<TableCell colSpan={9} className="text-center h-32 md:h-64">
+									<TableCell colSpan={10} className="text-center h-32 md:h-64">
 										{t('table.loading')}
 									</TableCell>
 								</TableRow>
@@ -424,7 +565,7 @@ export default function RankPage() {
 								</TableRow>
 							) : data?.results.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={9} className="text-center h-32 md:h-64">
+									<TableCell colSpan={10} className="text-center h-32 md:h-64">
 										{t('table.noResults')}
 									</TableCell>
 								</TableRow>
@@ -593,6 +734,18 @@ export default function RankPage() {
 										)}
 										{visibleColumns.totalTests && (
 											<TableCell>{result.totalTests}</TableCell>
+										)}
+										{visibleColumns.delete && (
+											<TableCell>
+												<Button
+													variant="ghost"
+													size="icon"
+													onClick={() => handleDelete(result)}
+													className="text-red-500 hover:text-red-700"
+												>
+													<Trash2 className="h-4 w-4" />
+												</Button>
+											</TableCell>
 										)}
 									</TableRow>
 								))
