@@ -36,13 +36,13 @@
     "title": "大模型 API 速度测试"
   },
   "Metadata": {
-    "title": "LM Speed - 大模型 API 速度测试 & 排行",
+    "title": "LM Speed X - 大模型 API 速度测试 & 排行",
     "description": "专业的大模型 API 速度测试工具，提供实时性能分析和全球速度排行榜。支持多种大模型服务商，帮助开发者选择最优 API 服务商，优化应用性能",
     "ogImage": "/og-1739454509332.png"
   },
   "Nav": {
-    "title": "LM Speed 提供商导航",
-    "subtitle": "以下是所有在 LM Speed 测试中使用的 API 提供商列表",
+    "title": "LM Speed X 提供商导航",
+    "subtitle": "以下是所有在 LM Speed X 测试中使用的 API 提供商列表",
     "loading": "加载中...",
     "viewResults": "查看测试结果"
   },
@@ -54,7 +54,7 @@
     "form": {
       "apiKey": {
         "label": "API 密钥",
-        "disclaimer": "LM Speed 不会存储您的 API 密钥，仅用于一次性测试",
+        "disclaimer": "LM Speed X 不会存储您的 API 密钥，仅用于一次性测试",
         "remember": "本地记住 API 密钥"
       },
       "baseUrl": {
@@ -112,11 +112,11 @@
   },
   "FAQ": {
     "title": "常见问题",
-    "subtitle": "了解更多关于 LM Speed 的详细信息",
+    "subtitle": "了解更多关于 LM Speed X 的详细信息",
     "questions": {
       "performance": {
-        "question": "LM Speed 如何进行性能测试？",
-        "answer": "LM Speed 采用五轮连续压力测试机制。通过 tiktoken 进行精确的令牌计算。"
+        "question": "LM Speed X 如何进行性能测试？",
+        "answer": "LM Speed X 采用五轮连续压力测试机制。通过 tiktoken 进行精确的令牌计算。"
       },
       "comparison": {
         "question": "如何比较不同 API 服务商的性能？",
@@ -161,7 +161,7 @@
       "month": "最近一个月",
       "week": "最近一周"
     },
-    "title": "LM Speed 速度测试排名",
+    "title": "LM Speed X 速度测试排名",
     "customFilter": "自定义筛选...",
     "export": "导出排行榜",
     "import": "导入数据",

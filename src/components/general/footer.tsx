@@ -22,7 +22,14 @@ export default function Footer() {
         >
           Nexmoe
         </a>
-        , Modified version by <a
+        , <a
+          href="https://github.com/XTsat/LM-Speed-X"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-600"
+        >
+          LM Speed X
+        </a> Modified version by <a
           href="https://github.com/XTsat"
           target="_blank"
           rel="noopener noreferrer"
@@ -33,7 +40,7 @@ export default function Footer() {
       </p>
       
       <a
-        href="https://github.com/XTsat/lm-speed"
+        href="https://github.com/XTsat/LM-Speed-X"
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center mt-4 text-sm text-gray-600 hover:text-gray-900 transition-colors"

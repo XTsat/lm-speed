@@ -23,7 +23,7 @@
     "title": "Professional API Speed Testing Tool"
   },
   "Header": {
-    "brand": "LM Speed",
+    "brand": "LM Speed X",
     "home": "Home",
     "rank": "Ranking",
     "feedback": "Feedback",
@@ -36,13 +36,13 @@
     "title": "LLM API Speed Test"
   },
   "Metadata": {
-    "title": "LM Speed - LLM API Speed Test & Ranking",
+    "title": "LM Speed X - LLM API Speed Test & Ranking",
     "description": "Professional LLM API speed testing tool providing real-time performance analysis and global speed rankings. Supporting multiple LLM service providers to help developers choose the optimal API provider and optimize application performance",
     "ogImage": "/og-1739454626988.png"
   },
   "Nav": {
-    "title": "LM Speed Provider Navigation",
-    "subtitle": "Here is a list of all API providers used in LM Speed tests",
+    "title": "LM Speed X Provider Navigation",
+    "subtitle": "Here is a list of all API providers used in LM Speed X tests",
     "loading": "Loading...",
     "viewResults": "View Test Results"
   },
@@ -54,7 +54,7 @@
     "form": {
       "apiKey": {
         "label": "API Key",
-        "disclaimer": "LM Speed does not store your API key, only used for one-time testing",
+        "disclaimer": "LM Speed X does not store your API key, only used for one-time testing",
         "remember": "Remember API key in browser"
       },
       "baseUrl": {
@@ -112,11 +112,11 @@
   },
   "FAQ": {
     "title": "Frequently Asked Questions",
-    "subtitle": "Learn more about LM Speed",
+    "subtitle": "Learn more about LM Speed X",
     "questions": {
       "performance": {
-        "question": "How does LM Speed conduct performance testing?",
-        "answer": "LM Speed employs a five-round continuous stress testing mechanism. Token calculations are performed accurately using tiktoken."
+        "question": "How does LM Speed X conduct performance testing?",
+        "answer": "LM Speed X employs a five-round continuous stress testing mechanism. Token calculations are performed accurately using tiktoken."
       },
       "comparison": {
         "question": "How to compare performance between different API providers?",

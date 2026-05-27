@@ -672,7 +672,7 @@ export function SpeedTestForm() {
 						{results.every((result) => result.status === 'completed') && (
 							<div id="summary" className="mb-8 p-6 bg-[#17181C] rounded-lg">
 								<h3 className="text-lg font-semibold text-white mb-1">
-									<span>LM Speed {t('results.summary.title')}</span>
+									<span>LM Speed X {t('results.summary.title')}</span>
 								</h3>
 								<div className="text-sm font-normal mb-4">
 									<span className="text-gray-400 mr-2">Model:</span>
